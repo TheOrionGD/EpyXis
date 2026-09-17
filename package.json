@@ -1,0 +1,14 @@
+{
+  "name": "epyxis-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Epyxis Precision Endpoint Security & SaaS Platform Workspace",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File ./start-system.ps1",
+    "start:bat": "cmd /c start-system.bat",
+    "start:backend": "cd epyxis-backend && set PORT=5000 && node index.js",
+    "start:frontend": "cd epyxis-app && npm run dev",
+    "start:agent": "cd epyxis-agent && dotnet run --project EpyxisAgentTray/EpyxisAgentTray.csproj"
+  }
+}
+

@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #F8F8F6;
+    --bg-secondary: #E6E6E2;
+    --text-dark: #2D2D2D;
+    --text-black: #111111;
+    --accent-blue: #4A6CF7;
+    --border-subtle: rgba(17, 17, 17, 0.08);
+    --border-glass: rgba(255, 255, 255, 0.85);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-black);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .studio-bg-fog {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: 
+      radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+      radial-gradient(circle at 85% 30%, rgba(230, 230, 226, 0.3) 0%, transparent 45%),
+      radial-gradient(circle at 50% 80%, rgba(74, 108, 247, 0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: -10;
+  }
+
+  /* Custom Smooth Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #F8F8F6;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #E6E6E2;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2D2D2D;
+  }
+}
+
+/* ULTRA FROSTED GLASS UI SYSTEM */
+.glass-capsule {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 16px 40px -10px rgba(17, 17, 17, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 24px 60px -15px rgba(17, 17, 17, 0.05), inset 0 1.5px 2px rgba(255, 255, 255, 0.95);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 30px -10px rgba(17, 17, 17, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+.glass-card:hover {
+  transform: translateY(-8px) rotate(2deg) scale(1.01);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(74, 108, 247, 0.45);
+  box-shadow: 0 28px 56px -12px rgba(17, 17, 17, 0.09), 0 0 28px rgba(74, 108, 247, 0.15);
+}
+
+.glass-dark {
+  background: rgba(17, 17, 17, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  box-shadow: 0 36px 72px -18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.frosted-page-container {
+  background: rgba(248, 248, 246, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Editorial Typography */
+.editorial-title {
+  font-size: clamp(3.5rem, 8vw, 6.25rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 0.96;
+}
+
+.editorial-headline {
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.editorial-sub {
+  letter-spacing: -0.015em;
+  line-height: 1.65;
+}
+
+/* Magnetic Button with Light Sweep Shimmer */
+.btn-magnetic {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s ease, background-color 0.25s ease;
+  cursor: pointer;
+}
+
+.btn-magnetic:hover {
+  transform: scale(1.02) translateY(-1px);
+}
+
+.btn-magnetic:active {
+  transform: scale(0.98) translateY(0);
+}
+
+/* White Reflection Light Sweep Overlay */
+.btn-magnetic::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: left 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-magnetic:hover::before {
+  left: 140%;
+}

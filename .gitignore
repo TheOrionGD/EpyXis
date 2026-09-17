@@ -1,0 +1,88 @@
+# ==========================================
+# EPYXIS Security System - Global .gitignore
+# ==========================================
+
+# ------------------------------------------
+# Environment & Secrets
+# ------------------------------------------
+.env
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+
+# ------------------------------------------
+# Node.js & JavaScript (epyxis-backend / epyxis-app)
+# ------------------------------------------
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+/epyxis-app/dist/
+/epyxis-app/dist-ssr/
+/epyxis-app/build/
+*.tsbuildinfo
+
+# ------------------------------------------
+# .NET / C# (epyxis-agent)
+# ------------------------------------------
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+*.nupkg
+*.snupkg
+.vs/
+.idea/
+
+# ------------------------------------------
+# Logs & Databases
+# ------------------------------------------
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+
+# ------------------------------------------
+# Operating System & IDE Files
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+
+# ------------------------------------------
+# Media & Temporary Files
+# ------------------------------------------
+*.tmp
+*.temp
+scratch/
