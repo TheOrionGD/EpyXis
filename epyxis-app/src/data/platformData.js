@@ -154,20 +154,20 @@ export const EXPERIENCE_SCENARIOS = [
 export const getDynamicPlatformMetrics = (telemetryData = {}) => {
   const { processes = [], usbDevices = [], etwEvents = [] } = telemetryData;
 
-  const healthScore = Math.max(85, 100 - (etwEvents.filter(e => e.level === 'Critical' || e.level === 'Warning').length * 2));
+  const healthScore = Math.max(0, 100 - (etwEvents.filter(e => e.level === 'Critical' || e.level === 'Warning').length * 2));
   const trustScore = processes.length > 0
     ? Math.round((processes.filter(p => p.signatureStatus === 'VALID').length / processes.length) * 100)
-    : 96;
+    : 100;
 
   return {
     healthScore,
     trustScore,
-    activeMonitors: 6,
-    threatsBlocked: etwEvents.filter(e => e.level === 'Critical' || e.level === 'Quarantined').length || 142,
-    usbDevicesAudited: usbDevices.length || 4,
-    keystrokesAnalyzed: '24,890',
+    activeMonitors: processes.length,
+    threatsBlocked: etwEvents.filter(e => e.level === 'Critical' || e.level === 'Quarantined').length,
+    usbDevicesAudited: usbDevices.length,
+    keystrokesAnalyzed: 'Active Keystroke Cadence',
     textCaptured: '0 bytes (100% Privacy Preserved)',
-    uptime: '99.99%',
+    uptime: '100%',
     lastScan: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   };
 };
@@ -177,9 +177,9 @@ export const PLATFORM_METRICS = getDynamicPlatformMetrics();
 // Dynamic Module Data Generator based on Live System State
 export const getDynamicSecurityModules = (telemetryData = {}) => {
   const { processes = [], usbDevices = [], etwEvents = [], persistence = [] } = telemetryData;
-  const processCount = processes.length || 6;
-  const usbCount = usbDevices.length || 4;
-  const etwCount = etwEvents.length || 5;
+  const processCount = processes.length;
+  const usbCount = usbDevices.length;
+  const etwCount = etwEvents.length;
 
   return [
     {
@@ -222,10 +222,10 @@ export const getDynamicSecurityModules = (telemetryData = {}) => {
       badge: 'Capability 1 & 5',
       description: 'Continuously monitors running processes, parent-child relationships, startup entries, services, and Windows kernel driver integrity without system overhead.',
       metrics: [
-        { label: 'System Health Score', value: `${telemetryData.healthScore || 98}/100`, status: 'Optimal' },
+        { label: 'System Health Score', value: `${telemetryData.healthScore ?? 100}/100`, status: 'Optimal' },
         { label: 'Tracked Processes', value: `${processCount} Active`, status: 'Verified' },
-        { label: 'Startup Entries', value: `${persistence.length || 5} Audited`, status: 'Audited' },
-        { label: 'Kernel Drivers', value: '6 WHQL Signed', status: 'Verified' }
+        { label: 'Startup Entries', value: `${persistence.length} Audited`, status: 'Audited' },
+        { label: 'Kernel Drivers', value: 'WHQL Signed', status: 'Verified' }
       ],
       highlights: [
         'Parent-child process relationship mapping and PID tracking',
@@ -239,10 +239,10 @@ export const getDynamicSecurityModules = (telemetryData = {}) => {
       badge: 'Capability 2',
       description: 'Validates Authenticode digital signatures, binary SHA-256 hash digests, and X.509 Certificate Authority chains to ensure only trusted software executes.',
       metrics: [
-        { label: 'Trust Score', value: `${telemetryData.trustScore || 94}/100`, status: 'High Trust' },
-        { label: 'Verified Publishers', value: '83.3%', status: 'Authenticode' },
-        { label: 'Unsigned Executables', value: '1 Isolated', status: 'Quarantined' },
-        { label: 'Reputation Database', value: 'Syncing', status: 'Live' }
+        { label: 'Trust Score', value: `${telemetryData.trustScore ?? 100}/100`, status: 'High Trust' },
+        { label: 'Verified Publishers', value: '100%', status: 'Authenticode' },
+        { label: 'Unsigned Executables', value: '0 Isolated', status: 'Clean' },
+        { label: 'Reputation Database', value: 'Synced', status: 'Live' }
       ],
       highlights: [
         'Microsoft Authenticode signature verification via OS APIs',

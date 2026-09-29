@@ -4,7 +4,7 @@ export const HEADER_NAV_LINKS = [
   { name: 'Defensive Engines', path: '/modules' },
   { name: 'Architecture', path: '/architecture' },
   { name: 'Privacy Engine', path: '/privacy' },
-  { name: 'Interactive Demo', path: '/experience' },
+  { name: 'Walkthrough', path: '/experience' },
   { name: 'Request Access', path: '/request-access' },
   { name: 'Provider Admin', path: '/provider-admin' },
 ];

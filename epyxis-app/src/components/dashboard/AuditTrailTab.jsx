@@ -8,7 +8,8 @@ export default function AuditTrailTab() {
 
   const fetchAuditLogs = async () => {
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch('http://localhost:5000/api/team/audit-logs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });

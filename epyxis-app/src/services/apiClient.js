@@ -1,12 +1,14 @@
 const BASE_URL = 'http://localhost:5000/api';
 
 const getAuthHeaders = () => {
-  // Try to get token from local storage or context (stubbed for now)
-  const token = localStorage.getItem('token') || 'dummy-dev-token';
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+  const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json'
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 };
 
 export const apiClient = {

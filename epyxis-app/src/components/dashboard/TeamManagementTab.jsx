@@ -13,7 +13,8 @@ export default function TeamManagementTab() {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch('http://localhost:5000/api/team/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -33,7 +34,8 @@ export default function TeamManagementTab() {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch('http://localhost:5000/api/team/users', {
         method: 'POST',
         headers: { 
@@ -64,7 +66,8 @@ export default function TeamManagementTab() {
 
   const handleResetPassword = async (userId) => {
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`http://localhost:5000/api/team/users/${userId}/reset`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -72,9 +75,9 @@ export default function TeamManagementTab() {
       const data = await res.json();
       if (res.ok) {
         setCreatedUserTempCreds({
-          name: data.name || 'User',
-          email: data.email || 'User',
-          username: data.email || 'User',
+          name: data.name,
+          email: data.email,
+          username: data.email,
           tempPassword: data.tempPassword,
           role: 'reset'
         });
@@ -90,7 +93,8 @@ export default function TeamManagementTab() {
   const handleDisableUser = async (userId) => {
     if (!window.confirm('Are you sure you want to disable access for this user?')) return;
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`http://localhost:5000/api/team/users/${userId}/disable`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }

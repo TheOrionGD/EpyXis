@@ -111,7 +111,7 @@ export default function RequestAccessPage({ isEmbedded = false, theme = isEmbedd
             </div>
             <div className="flex justify-between border-b border-black/5 pb-2">
               <span className="text-[#888888]">Tenant ID:</span>
-              <span className="font-mono text-[#4A6CF7]">{provisionedData.tenant?.id || 'TN-AUTO-01'}</span>
+              <span className="font-mono text-[#4A6CF7]">{provisionedData.tenant?.id || provisionedData.tenant?._id}</span>
             </div>
             <div className="flex justify-between border-b border-black/5 pb-2">
               <span className="text-[#888888]">Admin Account:</span>
@@ -125,7 +125,7 @@ export default function RequestAccessPage({ isEmbedded = false, theme = isEmbedd
             <div className="pt-2">
               <div className="text-[10px] text-[#888888] uppercase tracking-wider mb-1 font-sans font-bold">Device Enrollment Token (Windows Agent):</div>
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/5 border border-black/10 font-mono text-[11px] break-all">
-                <span className="text-[#4A6CF7] font-bold">{provisionedData.enrollmentToken || 'epyxis-token-default-01'}</span>
+                <span className="text-[#4A6CF7] font-bold">{provisionedData.enrollmentToken}</span>
                 <button
                   onClick={copyEnrollmentToken}
                   className="p-1.5 rounded-lg bg-white border border-black/10 text-zinc-700 hover:bg-zinc-100 cursor-pointer shrink-0 ml-2"

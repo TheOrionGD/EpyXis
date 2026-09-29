@@ -3,7 +3,7 @@ import { useRbac } from '../../context/RbacContext';
 import { ShieldAlert, Lock, UserCheck, X } from 'lucide-react';
 
 export default function RbacGuardModal() {
-  const { rbacGuardModal, closeGuardModal, currentUser, users, switchUser } = useRbac();
+  const { rbacGuardModal, closeGuardModal, currentUser } = useRbac();
 
   if (!rbacGuardModal.isOpen) return null;
 
@@ -38,37 +38,14 @@ export default function RbacGuardModal() {
           </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/60 space-y-3 text-xs">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/60 space-y-2 text-xs">
           <div className="font-bold text-amber-900 flex items-center space-x-2">
             <UserCheck className="w-4 h-4 text-amber-600" />
-            <span>Switch Role Session (Demo Authorization)</span>
+            <span>Privilege Escalation Required</span>
           </div>
-          <p className="text-amber-800 text-[11px]">
-            To execute administrative or analyst operations, switch to an authorized user session:
+          <p className="text-amber-800 text-[11px] leading-relaxed">
+            This action is restricted by enterprise policy. To perform administrative or high-impact security operations, please contact your workspace administrator or request temporary role elevation.
           </p>
-
-          <div className="space-y-1.5 pt-1">
-            {users.map(u => (
-              <button
-                key={u.id}
-                onClick={() => {
-                  switchUser(u.id);
-                  closeGuardModal();
-                }}
-                className={`w-full p-2 rounded-xl text-left flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                  u.id === currentUser.id 
-                    ? 'bg-amber-200/60 text-amber-950 font-bold border border-amber-300' 
-                    : 'bg-white/80 hover:bg-white text-zinc-800 border border-black/5 font-medium'
-                }`}
-              >
-                <div>
-                  <span className="font-bold">{u.name}</span>
-                  <span className="text-[10px] text-zinc-500 block">{u.role}</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-white font-bold">{u.badge}</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="pt-2 flex justify-end">

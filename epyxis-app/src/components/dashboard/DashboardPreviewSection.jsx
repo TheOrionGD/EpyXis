@@ -1,10 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Cpu, Activity, HardDrive, Lock, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { PLATFORM_METRICS } from '../../data/platformData';
+import { telemetryService } from '../../services/telemetryService';
 import { motion } from 'framer-motion';
 
 export default function DashboardPreviewSection({ onOpenDashboard }) {
+  const [metrics, setMetrics] = useState(PLATFORM_METRICS);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    async function fetchLiveStats() {
+      try {
+        const stats = await telemetryService.getStats();
+        if (stats) {
+          setMetrics(prev => ({
+            ...prev,
+            healthScore: stats.healthScore ?? prev.healthScore,
+            trustScore: stats.trustScore ?? prev.trustScore,
+            usbDevicesAudited: stats.usbDevicesAudited ?? prev.usbDevicesAudited,
+            activeMonitors: stats.processesTracked ?? prev.activeMonitors
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard preview telemetry:', err);
+      }
+    }
+    fetchLiveStats();
+  }, []);
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -75,7 +97,7 @@ export default function DashboardPreviewSection({ onOpenDashboard }) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
             <div className="text-xs text-zinc-400 font-medium">System Health Score</div>
-            <div className="text-3xl font-extrabold text-white">{PLATFORM_METRICS.healthScore} / 100</div>
+            <div className="text-3xl font-extrabold text-white">{metrics.healthScore} / 100</div>
             <div className="text-[11px] text-[#4A6CF7] font-semibold flex items-center space-x-1">
               <CheckCircle2 className="w-3 h-3" />
               <span>Optimal Security State</span>
@@ -84,19 +106,19 @@ export default function DashboardPreviewSection({ onOpenDashboard }) {
 
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
             <div className="text-xs text-zinc-400 font-medium">Publisher Trust Score</div>
-            <div className="text-3xl font-extrabold text-[#4A6CF7]">{PLATFORM_METRICS.trustScore}%</div>
+            <div className="text-3xl font-extrabold text-[#4A6CF7]">{metrics.trustScore}%</div>
             <div className="text-[11px] text-zinc-400 font-medium">Authenticode Validated</div>
           </div>
 
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
             <div className="text-xs text-zinc-400 font-medium">USB HIDs Audited</div>
-            <div className="text-3xl font-extrabold text-white">{PLATFORM_METRICS.usbDevicesAudited} Devices</div>
+            <div className="text-3xl font-extrabold text-white">{metrics.usbDevicesAudited} Devices</div>
             <div className="text-[11px] text-emerald-400 font-medium">0 BadUSB Threats</div>
           </div>
 
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
             <div className="text-xs text-zinc-400 font-medium">Privacy Status</div>
-            <div className="text-2xl font-extrabold text-white">100%</div>
+            <div className="text-2xl font-extrabold text-white">{metrics.privacyScore}</div>
             <div className="text-[11px] text-[#4A6CF7] font-semibold">Zero Text Captured</div>
           </div>
         </div>

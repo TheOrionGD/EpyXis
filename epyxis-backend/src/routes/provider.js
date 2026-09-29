@@ -10,6 +10,7 @@ const AuditLog = require('../models/AuditLog');
 const { providerProtect } = require('../middleware/authMiddleware');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/jwtConfig');
+const { sendTransactionalEmail } = require('../services/emailService');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: '12h' });
@@ -122,18 +123,12 @@ router.post('/requests/:id/approve', async (req, res) => {
       metadata: { requestId: request._id, providerUserId: req.providerUser._id }
     });
 
-    // 6. Mock Email
-    console.log(`\n=======================================================`);
-    console.log(`=== MOCK TRANSACTIONAL EMAIL: TENANT WORKSPACE READY ===`);
-    console.log(`To: ${owner.email}`);
-    console.log(`Subject: Your Epyxis workspace is ready`);
-    console.log(`Body:\nHello ${owner.name},\nYour Epyxis workspace for ${tenant.name} is ready.`);
-    console.log(`Workspace Tenant Name: ${tenant.name}`);
-    console.log(`Username: ${owner.username}`);
-    console.log(`Temporary Password: ${tempPassword}`);
-    console.log(`Notice: Password expires in 72 hours. You must change your password on first login.`);
-    console.log(`Login URL: http://localhost:5173/login`);
-    console.log(`=======================================================\n`);
+    // 6. Dispatch Real Transactional Email
+    await sendTransactionalEmail({
+      to: owner.email,
+      subject: `Your Epyxis Enterprise Security Workspace is Ready: ${tenant.name}`,
+      text: `Hello ${owner.name},\n\nYour isolated workspace for ${tenant.name} is active and ready.\n\nTenant Name: ${tenant.name}\nUsername: ${owner.username}\nTemporary Password: ${tempPassword}\n\nNotice: Password expires in 72 hours. You must change your password on first login.\nLogin Portal: http://localhost:5173/login\n\nSecurity Operations Team\nEpyxis Precision Endpoint Governance`
+    });
 
     res.json({ 
       message: 'Tenant approved and provisioned successfully', 
@@ -160,10 +155,11 @@ router.post('/requests/:id/reject', async (req, res) => {
     request.reviewedBy = req.providerUser._id;
     await request.save();
 
-    console.log(`\n=== MOCK EMAIL: TENANT REQUEST REJECTED ===`);
-    console.log(`To: ${request.workEmail}`);
-    console.log(`Subject: Update on your Epyxis request`);
-    console.log(`Body: Thank you for your interest. Unfortunately, we are unable to provision a workspace for ${request.orgName} at this time.\n===========================================\n`);
+    await sendTransactionalEmail({
+      to: request.workEmail,
+      subject: `Update on your Epyxis Workspace Request - ${request.orgName}`,
+      text: `Hello ${request.contactName},\n\nThank you for your interest in Epyxis Endpoint Security. Unfortunately, our team is unable to provision an enterprise workspace for ${request.orgName} at this time.\n\nSecurity Operations Team\nEpyxis Precision Endpoint Governance`
+    });
 
     res.json({ message: 'Tenant request rejected' });
   } catch (error) {
@@ -184,10 +180,11 @@ router.post('/requests/:id/more-info', async (req, res) => {
     request.reviewedBy = req.providerUser._id;
     await request.save();
 
-    console.log(`\n=== MOCK EMAIL: MORE INFO REQUESTED ===`);
-    console.log(`To: ${request.workEmail}`);
-    console.log(`Subject: Further details required for your Epyxis request`);
-    console.log(`Body: Hello ${request.contactName}, our team needs additional details regarding your endpoint requirements for ${request.orgName}.\n=======================================\n`);
+    await sendTransactionalEmail({
+      to: request.workEmail,
+      subject: `Further Information Required: Epyxis Workspace for ${request.orgName}`,
+      text: `Hello ${request.contactName},\n\nOur security governance team is reviewing your workspace application for ${request.orgName}. Additional endpoint specifications are required before enrollment keys can be minted.\n\nPlease reply directly to this notice with your endpoint deployment parameters.\n\nSecurity Operations Team\nEpyxis Precision Endpoint Governance`
+    });
 
     res.json({ message: 'More info requested from tenant' });
   } catch (error) {

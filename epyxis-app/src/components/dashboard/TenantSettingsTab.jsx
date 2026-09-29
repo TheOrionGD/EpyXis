@@ -16,7 +16,8 @@ export default function TenantSettingsTab() {
 
   const fetchSettings = async () => {
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch('http://localhost:5000/api/tenants/settings', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -46,7 +47,8 @@ export default function TenantSettingsTab() {
     e.preventDefault();
     setSaving(true);
     try {
-      const token = localStorage.getItem('token') || 'dummy-token';
+      const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch('http://localhost:5000/api/tenants/settings', {
         method: 'POST',
         headers: { 
@@ -101,28 +103,28 @@ export default function TenantSettingsTab() {
           <div className="space-y-3 text-xs">
             <div>
               <div className="text-[10px] font-bold text-[#888888] uppercase">Organization Name</div>
-              <div className="font-bold text-[#111111] text-sm">{tenant?.name || 'Workspace'}</div>
+              <div className="font-bold text-[#111111] text-sm">{tenant?.name}</div>
             </div>
 
             <div>
               <div className="text-[10px] font-bold text-[#888888] uppercase">Validated Domain</div>
-              <div className="font-mono text-[#4A6CF7]">{tenant?.domain || 'acme.com'}</div>
+              <div className="font-mono text-[#4A6CF7]">{tenant?.domain}</div>
             </div>
 
             <div>
               <div className="text-[10px] font-bold text-[#888888] uppercase">Plan Tier</div>
               <div className="inline-block px-2 py-0.5 rounded bg-[#111111] text-white text-[10px] font-bold uppercase mt-1">
-                {tenant?.planTier || 'Enterprise'}
+                {tenant?.planTier}
               </div>
             </div>
 
             <div>
               <div className="text-[10px] font-bold text-[#888888] uppercase mb-1">Endpoint Quota Limit</div>
               <div className="w-full bg-[#E6E6E2] h-2 rounded-full overflow-hidden">
-                <div className="bg-[#4A6CF7] h-full w-[45%]" />
+                <div className="bg-[#4A6CF7] h-full w-[100%]" />
               </div>
               <div className="text-[10px] text-[#555555] mt-1 font-semibold">
-                45 / {tenant?.endpointLimit || 100} endpoints active
+                {tenant?.endpointLimit} endpoints allocated
               </div>
             </div>
           </div>

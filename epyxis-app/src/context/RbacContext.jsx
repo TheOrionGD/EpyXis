@@ -57,15 +57,17 @@ export const ROLE_HIERARCHY = {
   }
 };
 
-const DEFAULT_GUEST = {
-  id: 'usr-authenticated',
-  name: 'Authenticated User',
-  email: 'user@organization.io',
-  role: 'TENANT_ADMIN',
-  roleName: 'Tenant Administrator',
-  badge: 'TENANT ADMIN',
-  orgId: 'ORG-ACME-8902',
-  permissions: ROLE_HIERARCHY.TENANT_ADMIN.permissions
+const EMPTY_USER = {
+  id: '',
+  name: '',
+  email: '',
+  role: '',
+  roleName: '',
+  badge: '',
+  orgId: '',
+  permissions: [],
+  isGoogleLinked: false,
+  isProfileComplete: false
 };
 
 export function RbacProvider({ children }) {
@@ -74,25 +76,29 @@ export function RbacProvider({ children }) {
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        const roleKey = parsed.role || parsed.roleBadge || 'TENANT_ADMIN';
+        const roleKey = parsed.role === 'owner' || parsed.role === 'admin' 
+          ? 'TENANT_ADMIN' 
+          : parsed.role === 'analyst' 
+          ? 'TENANT_ANALYST' 
+          : (parsed.role || 'TENANT_ADMIN');
         const roleConfig = ROLE_HIERARCHY[roleKey] || ROLE_HIERARCHY.TENANT_ADMIN;
         return {
-          id: parsed.id || parsed.uid || 'usr-active',
-          name: parsed.name || parsed.displayName || parsed.username || 'Active User',
-          email: parsed.email || 'user@epyxis.io',
+          id: parsed._id || parsed.id || '',
+          name: parsed.name || '',
+          email: parsed.email || '',
           role: roleKey,
           roleName: roleConfig.roleName,
           badge: roleConfig.badge,
-          orgId: parsed.orgId || parsed.organizationId || 'ORG-EPYXIS-MAIN',
+          orgId: parsed.tenantId || parsed.orgId || '',
           permissions: roleConfig.permissions,
-          isGoogleLinked: !!parsed.isGoogleLinked,
-          isProfileComplete: !!parsed.isProfileComplete
+          isGoogleLinked: Boolean(parsed.isGoogleLinked),
+          isProfileComplete: Boolean(parsed.isProfileComplete)
         };
       }
     } catch (e) {
       console.warn('Failed to parse active user from storage', e);
     }
-    return DEFAULT_GUEST;
+    return EMPTY_USER;
   });
 
   const [rbacGuardModal, setRbacGuardModal] = useState({ 
@@ -103,20 +109,30 @@ export function RbacProvider({ children }) {
 
   // Function to set current logged-in user dynamically upon login/setup
   const updateUserSession = (userData) => {
-    const roleKey = userData.role || 'TENANT_ADMIN';
+    if (!userData) {
+      setCurrentUser(EMPTY_USER);
+      localStorage.removeItem('user');
+      return;
+    }
+
+    const roleKey = userData.role === 'owner' || userData.role === 'admin' 
+      ? 'TENANT_ADMIN' 
+      : userData.role === 'analyst' 
+      ? 'TENANT_ANALYST' 
+      : (userData.role || 'TENANT_ADMIN');
     const roleConfig = ROLE_HIERARCHY[roleKey] || ROLE_HIERARCHY.TENANT_ADMIN;
     
     const updated = {
-      id: userData.id || userData.uid || 'usr-active',
-      name: userData.name || userData.displayName || userData.username || 'Active User',
-      email: userData.email || 'user@epyxis.io',
+      id: userData._id || userData.id || '',
+      name: userData.name || '',
+      email: userData.email || '',
       role: roleKey,
       roleName: roleConfig.roleName,
       badge: roleConfig.badge,
-      orgId: userData.orgId || userData.organizationId || 'ORG-EPYXIS-MAIN',
+      orgId: userData.tenantId || userData.orgId || '',
       permissions: roleConfig.permissions,
-      isGoogleLinked: !!userData.isGoogleLinked,
-      isProfileComplete: !!userData.isProfileComplete
+      isGoogleLinked: Boolean(userData.isGoogleLinked),
+      isProfileComplete: Boolean(userData.isProfileComplete)
     };
     
     setCurrentUser(updated);

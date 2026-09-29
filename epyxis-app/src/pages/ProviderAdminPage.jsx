@@ -389,7 +389,7 @@ export default function ProviderAdminPage({ isEmbedded = false, theme = isEmbedd
                             <div className="text-[10px] text-[#4A6CF7] font-mono">{req.workEmail}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="font-bold">{req.endpointEstimate || 50}</span> endpoints
+                            <span className="font-bold">{req.endpointEstimate}</span> endpoints
                           </td>
                           <td className="px-6 py-4 text-[#888888]">
                             {new Date(req.submittedAt).toLocaleDateString()}
@@ -498,7 +498,7 @@ export default function ProviderAdminPage({ isEmbedded = false, theme = isEmbedd
                   </div>
                   <div className="p-3 bg-[#F8F8F6] rounded-xl">
                     <div className="text-[10px] font-bold uppercase text-[#888888]">Role</div>
-                    <div className="font-semibold text-[#111111]">{selectedRequest.contactRole || 'N/A'}</div>
+                    <div className="font-semibold text-[#111111]">{selectedRequest.contactRole}</div>
                   </div>
                   <div className="p-3 bg-[#F8F8F6] rounded-xl col-span-2">
                     <div className="text-[10px] font-bold uppercase text-[#888888]">Work Email</div>
@@ -514,11 +514,11 @@ export default function ProviderAdminPage({ isEmbedded = false, theme = isEmbedd
                   </div>
                   <div className="p-3 bg-[#F8F8F6] rounded-xl">
                     <div className="text-[10px] font-bold uppercase text-[#888888]">Industry</div>
-                    <div className="font-semibold text-[#111111]">{selectedRequest.industry || 'General'}</div>
+                    <div className="font-semibold text-[#111111]">{selectedRequest.industry}</div>
                   </div>
                   <div className="p-3 bg-[#F8F8F6] rounded-xl">
                     <div className="text-[10px] font-bold uppercase text-[#888888]">Phone</div>
-                    <div className="font-semibold text-[#111111]">{selectedRequest.phone || 'N/A'}</div>
+                    <div className="font-semibold text-[#111111]">{selectedRequest.phone}</div>
                   </div>
                 </div>
 

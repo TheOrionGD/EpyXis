@@ -34,43 +34,117 @@ export default function LiveDashboardContent() {
   const [auditLedger, setAuditLedger] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  React.useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const events = await telemetryService.getEvents();
-        const usb = await telemetryService.getUsbEvents();
-        
-        if (usb && Array.isArray(usb)) {
-          setUsbDevices(usb.map(u => ({
-            id: u._id,
-            name: `USB Device ${u.vendorId}:${u.productId}`,
-            vid: u.vendorId,
-            pid: u.productId,
-            serial: `SN-${u._id.substring(0,6)}`,
-            status: u.trusted ? 'Whitelisted' : 'Quarantined'
-          })));
-        }
-        
-        if (events && Array.isArray(events)) {
-          const processEvents = events.filter(e => e.eventType === 'process_start');
-          setProcesses(processEvents.map((p, i) => ({
-            pid: p.payload?.pid || (i+1000),
-            ppid: p.payload?.ppid || 4,
-            name: p.payload?.name || 'Unknown',
-            publisher: p.payload?.publisher || 'Unknown',
-            signatureStatus: 'VALID',
-            memory: 'N/A'
-          })));
-        }
-      } catch (err) {
-        console.error("Failed to fetch telemetry", err);
-      } finally {
-        setIsLoading(false);
+  const loadData = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [events, usb, alerts, auditLogs] = await Promise.all([
+        telemetryService.getEvents().catch(() => []),
+        telemetryService.getUsbEvents().catch(() => []),
+        telemetryService.getAlerts().catch(() => []),
+        telemetryService.getAuditLogs().catch(() => [])
+      ]);
+      
+      // 1. USB Devices
+      if (usb && Array.isArray(usb)) {
+        setUsbDevices(usb.map(u => ({
+          id: u._id,
+          name: u.deviceClass ? `${u.deviceClass} (${u.vendorId}:${u.productId})` : `USB (${u.vendorId}:${u.productId})`,
+          vid: u.vendorId,
+          pid: u.productId,
+          serial: u.serialNumber,
+          status: u.trusted ? 'Whitelisted' : 'Quarantined'
+        })));
       }
+      
+      // 2. Process Telemetry
+      if (events && Array.isArray(events)) {
+        const processEvents = events.filter(e => e.eventType === 'process_snapshot' || e.eventType === 'process_start');
+        if (processEvents.length > 0) {
+          setProcesses(processEvents.map((p, i) => ({
+            pid: p.payload?.pid,
+            ppid: p.payload?.ppid,
+            name: p.payload?.name,
+            publisher: p.payload?.publisher,
+            signatureStatus: p.payload?.signatureStatus ? p.payload.signatureStatus.toUpperCase() : '',
+            memory: p.payload?.memory,
+            execPath: p.payload?.execPath
+          })));
+        }
+
+        // 3. Kernel Drivers
+        const driverEvents = events.filter(e => e.eventType === 'driver_snapshot' || e.eventType === 'driver_added');
+        if (driverEvents.length > 0) {
+          setDrivers(driverEvents.map(d => ({
+            serviceName: d.payload?.name,
+            displayName: d.payload?.displayName || d.payload?.name,
+            path: d.payload?.pathName,
+            whqlStatus: d.payload?.state === 'Running' ? 'WHQL Signed' : d.payload?.state,
+            publisher: d.payload?.publisher
+          })));
+        }
+
+        // 4. Persistence Entries
+        const persistenceEvents = events.filter(e => 
+          e.eventType === 'startup_snapshot' || 
+          e.eventType === 'startup_added' || 
+          e.eventType === 'service_snapshot' || 
+          e.eventType === 'task_snapshot'
+        );
+        if (persistenceEvents.length > 0) {
+          setPersistence(persistenceEvents.map(pst => ({
+            id: pst._id,
+            name: pst.payload?.displayName || pst.payload?.name || pst.payload?.taskName,
+            location: pst.payload?.hive ? `${pst.payload.hive}\\Run` : pst.payload?.taskPath,
+            binaryPath: pst.payload?.execPath,
+            status: pst.payload?.status
+          })));
+        }
+      }
+
+      // 5. ETW Events & Security Alerts
+      if (alerts && Array.isArray(alerts) && alerts.length > 0) {
+        setEtwEvents(alerts.map((a, i) => {
+          const eventIdMatch = typeof a.details === 'string' && a.details.match(/Event ID (\d+)/);
+          return {
+            id: a._id,
+            eventId: eventIdMatch ? eventIdMatch[1] : '',
+            provider: a.category,
+            time: a.createdAt ? new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '',
+            description: typeof a.details === 'string' ? a.details : JSON.stringify(a.details),
+            level: a.severity ? (a.severity.charAt(0).toUpperCase() + a.severity.slice(1)) : 'Information',
+            user: a.actor || a.source || a.category
+          };
+        }));
+      }
+
+      // 6. Cryptographic Audit Ledger
+      if (auditLogs && Array.isArray(auditLogs) && auditLogs.length > 0) {
+        let prevHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        const chain = auditLogs.slice().reverse().map((log, index) => {
+          const entry = createLedgerEntry(
+            prevHash,
+            index,
+            log.actorUserId?.name,
+            log.actorUserId?.role,
+            log.action,
+            log.metadata ? (typeof log.metadata === 'string' ? log.metadata : JSON.stringify(log.metadata)) : '',
+            log.targetUserId?.name
+          );
+          prevHash = entry.hash;
+          return entry;
+        });
+        setAuditLedger(chain);
+      }
+    } catch (err) {
+      console.error("Failed to fetch real telemetry", err);
+    } finally {
+      setIsLoading(false);
     }
-    loadData();
   }, []);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
   const navigate = useNavigate();
 
   // Filters & Toggles
@@ -157,12 +231,11 @@ export default function LiveDashboardContent() {
     });
   };
 
-  const handleRefreshTelemetry = () => {
+  const handleRefreshTelemetry = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      addAuditLog('REFRESH_TELEMETRY', 'Triggered full system telemetry rescan across OS APIs', 'System');
-    }, 600);
+    await loadData();
+    setIsRefreshing(false);
+    addAuditLog('REFRESH_TELEMETRY', 'Triggered full system telemetry rescan across OS APIs', 'System');
   };
 
   const filteredProcesses = processes.filter(p => 
@@ -226,19 +299,21 @@ export default function LiveDashboardContent() {
                 className="bg-white rounded-2xl p-2.5 px-4 border border-slate-200/80 hover:border-indigo-300 shadow-xs flex items-center space-x-3 transition-all cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               >
                 <div className="w-9 h-9 rounded-full bg-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md shrink-0">
-                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : ''}
                 </div>
                 <div className="text-left">
                   <div className="flex items-center space-x-2">
                     <span className="font-extrabold text-slate-900 text-xs tracking-wide">
-                      {currentUser.name || 'ADMIN'}
+                      {currentUser?.name}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 font-extrabold text-[10px] uppercase">
-                      {currentUser.badge || 'TENANT ADMIN'}
-                    </span>
+                    {currentUser?.badge && (
+                      <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 font-extrabold text-[10px] uppercase">
+                        {currentUser.badge}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">
-                    {currentUser.orgId || 'ORG-EPYXIS-MAIN'} • {currentUser.email || 'admin@operionx.com'}
+                    {currentUser?.orgId ? `${currentUser.orgId} • ` : ''}{currentUser?.email}
                   </div>
                 </div>
               </button>
@@ -247,11 +322,13 @@ export default function LiveDashboardContent() {
               {profileDropdownOpen && (
                 <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200/90 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-3 py-2 border-b border-slate-100 mb-2">
-                    <p className="text-xs font-bold text-slate-900">{currentUser.name || 'Enterprise Admin'}</p>
-                    <p className="text-[10px] text-slate-500 font-mono truncate">{currentUser.email || 'admin@acme.com'}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[9px] font-extrabold uppercase">
-                      {currentUser.roleName || 'Tenant Administrator'}
-                    </span>
+                    <p className="text-xs font-bold text-slate-900">{currentUser?.name}</p>
+                    <p className="text-[10px] text-slate-500 font-mono truncate">{currentUser?.email}</p>
+                    {currentUser?.roleName && (
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[9px] font-extrabold uppercase">
+                        {currentUser.roleName}
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -535,37 +612,45 @@ export default function LiveDashboardContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5 font-medium text-[#2D2D2D]">
-                    {filteredProcesses.map(proc => (
-                      <tr key={proc.pid} className="hover:bg-[#F8F8F6]">
-                        <td className="p-3.5 font-bold text-[#111111]">
-                          <div>{proc.name}</div>
-                          <div className="text-[10px] text-[#888888] font-normal">PID: {proc.pid} | PPID: {proc.ppid}</div>
-                        </td>
-                        <td className="p-3.5">{proc.publisher}</td>
-                        <td className="p-3.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            proc.signatureStatus === 'VALID' ? 'bg-[#4A6CF7]/15 text-[#4A6CF7]' : 'bg-black/10 text-[#111111]'
-                          }`}>
-                            {proc.signatureStatus}
-                          </span>
-                        </td>
-                        <td className="p-3.5">{proc.memory}</td>
-                        <td className="p-3.5 space-x-2">
-                          <button
-                            onClick={() => setSelectedCert(proc)}
-                            className="px-2.5 py-1 rounded-lg bg-[#E6E6E2] hover:bg-black/10 text-xs font-semibold cursor-pointer"
-                          >
-                            Inspect Cert
-                          </button>
-                          <button
-                            onClick={() => handleKillProcess(proc)}
-                            className="px-2.5 py-1 rounded-lg bg-[#111111] text-white hover:bg-[#2D2D2D] text-xs font-semibold cursor-pointer"
-                          >
-                            Kill PID
-                          </button>
+                    {filteredProcesses.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="p-8 text-center text-xs text-[#888888]">
+                          No active process telemetry received. Workstation endpoint will stream process activity once connected.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredProcesses.map(proc => (
+                        <tr key={proc.pid} className="hover:bg-[#F8F8F6]">
+                          <td className="p-3.5 font-bold text-[#111111]">
+                            <div>{proc.name}</div>
+                            <div className="text-[10px] text-[#888888] font-normal">PID: {proc.pid} | PPID: {proc.ppid}</div>
+                          </td>
+                          <td className="p-3.5">{proc.publisher}</td>
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              proc.signatureStatus === 'VALID' ? 'bg-[#4A6CF7]/15 text-[#4A6CF7]' : 'bg-black/10 text-[#111111]'
+                            }`}>
+                              {proc.signatureStatus}
+                            </span>
+                          </td>
+                          <td className="p-3.5">{proc.memory}</td>
+                          <td className="p-3.5 space-x-2">
+                            <button
+                              onClick={() => setSelectedCert(proc)}
+                              className="px-2.5 py-1 rounded-lg bg-[#E6E6E2] hover:bg-black/10 text-xs font-semibold cursor-pointer"
+                            >
+                              Inspect Cert
+                            </button>
+                            <button
+                              onClick={() => handleKillProcess(proc)}
+                              className="px-2.5 py-1 rounded-lg bg-[#111111] text-white hover:bg-[#2D2D2D] text-xs font-semibold cursor-pointer"
+                            >
+                              Kill PID
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -616,16 +701,22 @@ export default function LiveDashboardContent() {
             </div>
 
             <div className="bg-[#111111] text-white rounded-2xl p-4 font-mono text-xs space-y-3 max-h-[420px] overflow-y-auto" data-lenis-prevent>
-              {filteredEtwEvents.map(evt => (
-                <div key={evt.id} className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                    <span className="text-[#4A6CF7] font-bold">Event ID {evt.eventId} | {evt.provider}</span>
-                    <span>{evt.time}</span>
-                  </div>
-                  <div className="text-zinc-200">{evt.description}</div>
-                  <div className="text-[10px] text-zinc-500">User Context: {evt.user}</div>
+              {filteredEtwEvents.length === 0 ? (
+                <div className="p-8 text-center text-xs text-zinc-400">
+                  No kernel ETW security events captured yet. Telemetry listener is active.
                 </div>
-              ))}
+              ) : (
+                filteredEtwEvents.map(evt => (
+                  <div key={evt.id} className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                      <span className="text-[#4A6CF7] font-bold">Event ID {evt.eventId} | {evt.provider}</span>
+                      <span>{evt.time}</span>
+                    </div>
+                    <div className="text-zinc-200">{evt.description}</div>
+                    <div className="text-[10px] text-zinc-500">User Context: {evt.user}</div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -634,28 +725,34 @@ export default function LiveDashboardContent() {
         {activeTab === 'usb' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {usbDevices.map(dev => (
-                <div key={dev.id} className="p-5 rounded-2xl bg-white border border-black/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-[#111111]">{dev.name}</span>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                      dev.status === 'Whitelisted' ? 'bg-[#4A6CF7]/15 text-[#4A6CF7]' : 'bg-black/10 text-[#111111]'
-                    }`}>
-                      {dev.status}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#555555] space-y-1">
-                    <div>Vendor ID (VID): <span className="font-mono text-[#111111]">{dev.vid}</span> | Product ID (PID): <span className="font-mono text-[#111111]">{dev.pid}</span></div>
-                    <div>Serial Signature: <span className="font-mono text-[#111111]">{dev.serial}</span></div>
-                  </div>
-                  <button
-                    onClick={() => handleToggleUsbStatus(dev)}
-                    className="w-full py-2 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-[#2D2D2D] cursor-pointer"
-                  >
-                    Toggle Whitelist State
-                  </button>
+              {usbDevices.length === 0 ? (
+                <div className="col-span-1 md:col-span-2 p-8 text-center bg-white rounded-2xl border border-black/5 text-xs text-[#888888]">
+                  No connected USB Human Interface Devices detected.
                 </div>
-              ))}
+              ) : (
+                usbDevices.map(dev => (
+                  <div key={dev.id} className="p-5 rounded-2xl bg-white border border-black/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#111111]">{dev.name}</span>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        dev.status === 'Whitelisted' ? 'bg-[#4A6CF7]/15 text-[#4A6CF7]' : 'bg-black/10 text-[#111111]'
+                      }`}>
+                        {dev.status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[#555555] space-y-1">
+                      <div>Vendor ID (VID): <span className="font-mono text-[#111111]">{dev.vid}</span> | Product ID (PID): <span className="font-mono text-[#111111]">{dev.pid}</span></div>
+                      <div>Serial Signature: <span className="font-mono text-[#111111]">{dev.serial}</span></div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleUsbStatus(dev)}
+                      className="w-full py-2 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-[#2D2D2D] cursor-pointer"
+                    >
+                      Toggle Whitelist State
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -674,18 +771,26 @@ export default function LiveDashboardContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 font-medium text-[#2D2D2D]">
-                  {drivers.map(drv => (
-                    <tr key={drv.serviceName}>
-                      <td className="p-3.5 font-bold text-[#111111]">{drv.displayName}</td>
-                      <td className="p-3.5 font-mono text-[11px] text-[#555555]">{drv.path}</td>
-                      <td className="p-3.5">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#4A6CF7]/15 text-[#4A6CF7]">
-                          {drv.whqlStatus}
-                        </span>
+                  {drivers.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-xs text-[#888888]">
+                        No kernel drivers reported yet.
                       </td>
-                      <td className="p-3.5">{drv.publisher}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    drivers.map(drv => (
+                      <tr key={drv.serviceName}>
+                        <td className="p-3.5 font-bold text-[#111111]">{drv.displayName}</td>
+                        <td className="p-3.5 font-mono text-[11px] text-[#555555]">{drv.path}</td>
+                        <td className="p-3.5">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#4A6CF7]/15 text-[#4A6CF7]">
+                            {drv.whqlStatus}
+                          </span>
+                        </td>
+                        <td className="p-3.5">{drv.publisher}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -696,28 +801,34 @@ export default function LiveDashboardContent() {
         {activeTab === 'persistence' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {persistence.map(pst => (
-                <div key={pst.id} className="p-5 rounded-2xl bg-white border border-black/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-[#111111]">{pst.name}</span>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                      pst.status === 'Enabled' ? 'bg-[#111111] text-white' : 'bg-[#E6E6E2] text-[#555555]'
-                    }`}>
-                      {pst.status}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#555555] space-y-1">
-                    <div>Location: <span className="font-mono text-[#111111]">{pst.location}</span></div>
-                    <div>Binary Path: <span className="font-mono text-[#111111]">{pst.binaryPath}</span></div>
-                  </div>
-                  <button
-                    onClick={() => handleTogglePersistence(pst)}
-                    className="w-full py-2 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-[#2D2D2D] cursor-pointer"
-                  >
-                    Toggle Entry State
-                  </button>
+              {persistence.length === 0 ? (
+                <div className="col-span-1 md:col-span-2 p-8 text-center bg-white rounded-2xl border border-black/5 text-xs text-[#888888]">
+                  No startup persistence entries registered.
                 </div>
-              ))}
+              ) : (
+                persistence.map(pst => (
+                  <div key={pst.id} className="p-5 rounded-2xl bg-white border border-black/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#111111]">{pst.name}</span>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        pst.status === 'Enabled' ? 'bg-[#111111] text-white' : 'bg-[#E6E6E2] text-[#555555]'
+                      }`}>
+                        {pst.status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[#555555] space-y-1">
+                      <div>Location: <span className="font-mono text-[#111111]">{pst.location}</span></div>
+                      <div>Binary Path: <span className="font-mono text-[#111111]">{pst.binaryPath}</span></div>
+                    </div>
+                    <button
+                      onClick={() => handleTogglePersistence(pst)}
+                      className="w-full py-2 rounded-xl bg-[#111111] text-white text-xs font-semibold hover:bg-[#2D2D2D] cursor-pointer"
+                    >
+                      Toggle Entry State
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -756,14 +867,22 @@ export default function LiveDashboardContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 font-medium text-[#2D2D2D]">
-                  {auditLedger.map(blk => (
-                    <tr key={blk.index}>
-                      <td className="p-3.5 font-bold text-[#111111]">#{blk.index}</td>
-                      <td className="p-3.5">{blk.actor} ({blk.role})</td>
-                      <td className="p-3.5 font-semibold text-[#4A6CF7]">{blk.action}</td>
-                      <td className="p-3.5 font-mono text-[10px] text-[#555555]">{blk.hash.substring(0, 24)}...</td>
+                  {auditLedger.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-xs text-[#888888]">
+                        No cryptographic audit blocks recorded yet. Actions taken on this workspace will appear here.
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    auditLedger.map(blk => (
+                      <tr key={blk.index}>
+                        <td className="p-3.5 font-bold text-[#111111]">#{blk.index}</td>
+                        <td className="p-3.5">{blk.actor} ({blk.role})</td>
+                        <td className="p-3.5 font-semibold text-[#4A6CF7]">{blk.action}</td>
+                        <td className="p-3.5 font-mono text-[10px] text-[#555555]">{blk.hash.substring(0, 24)}...</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

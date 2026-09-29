@@ -52,9 +52,11 @@ export default function CertificateInspectorModal({ cert, onClose }) {
               </p>
             </div>
           </div>
-          <span className="px-3 py-1 rounded-full bg-white font-mono text-[11px] font-bold border border-black/10">
-            {cert.hashAlgorithm || 'SHA-256'}
-          </span>
+          {cert.hashAlgorithm && (
+            <span className="px-3 py-1 rounded-full bg-white font-mono text-[11px] font-bold border border-black/10">
+              {cert.hashAlgorithm}
+            </span>
+          )}
         </div>
 
         {/* Certificate Hierarchy Chain */}
@@ -69,25 +71,27 @@ export default function CertificateInspectorModal({ cert, onClose }) {
             <div className="flex items-center space-x-3 p-2.5 rounded-xl bg-white border border-black/5">
               <div className="w-6 h-6 rounded bg-zinc-900 text-white flex items-center justify-center font-bold text-[10px]">R</div>
               <div>
-                <div className="font-bold text-zinc-900">{cert.rootCa || 'DigiCert Global Root CA'}</div>
+                <div className="font-bold text-zinc-900">{cert.rootCa || cert.issuer}</div>
                 <div className="text-[10px] text-zinc-500">Root Certification Authority (Trusted OS Store)</div>
               </div>
             </div>
 
             {/* Intermediate CA */}
-            <div className="ml-4 pl-4 border-l-2 border-dashed border-[#4A6CF7] flex items-center space-x-3 p-2.5 rounded-xl bg-white border border-black/5">
-              <div className="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">I</div>
-              <div>
-                <div className="font-bold text-zinc-900">{cert.intermediateCa || 'DigiCert Trusted G4 Code Signing CA'}</div>
-                <div className="text-[10px] text-zinc-500">Intermediate Code Signing Authority</div>
+            {cert.intermediateCa && (
+              <div className="ml-4 pl-4 border-l-2 border-dashed border-[#4A6CF7] flex items-center space-x-3 p-2.5 rounded-xl bg-white border border-black/5">
+                <div className="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">I</div>
+                <div>
+                  <div className="font-bold text-zinc-900">{cert.intermediateCa}</div>
+                  <div className="text-[10px] text-zinc-500">Intermediate Code Signing Authority</div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* End Entity / Leaf Certificate */}
             <div className="ml-8 pl-4 border-l-2 border-emerald-500 flex items-center space-x-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-200">
               <div className="w-6 h-6 rounded bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">S</div>
               <div>
-                <div className="font-bold text-emerald-950">{cert.subjectName || cert.publisher}</div>
+                <div className="font-bold text-emerald-950">{cert.subjectName || cert.publisher || cert.name}</div>
                 <div className="text-[10px] text-emerald-700">Leaf Code Signing Certificate (Subject)</div>
               </div>
             </div>
@@ -102,8 +106,10 @@ export default function CertificateInspectorModal({ cert, onClose }) {
               <Key className="w-3.5 h-3.5 text-[#4A6CF7]" />
               <span>Public Key Parameters</span>
             </div>
-            <div className="font-semibold text-[#111111]">{cert.keySpec || 'RSA 4096-bit (e=65537)'}</div>
-            <div className="text-[10px] font-mono text-zinc-500 truncate">Thumbprint: {cert.thumbprint || '9F8A2B7C4D6E1F809A2B3C4D5E6F7A8B'}</div>
+            <div className="font-semibold text-[#111111]">{cert.keySpec}</div>
+            {cert.thumbprint && (
+              <div className="text-[10px] font-mono text-zinc-500 truncate">Thumbprint: {cert.thumbprint}</div>
+            )}
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F8F8F6] border border-black/5 space-y-1.5">
@@ -111,19 +117,21 @@ export default function CertificateInspectorModal({ cert, onClose }) {
               <Calendar className="w-3.5 h-3.5 text-[#4A6CF7]" />
               <span>Validity Period</span>
             </div>
-            <div className="font-semibold text-[#111111]">Valid until {cert.validTo || '2028-10-15'}</div>
+            <div className="font-semibold text-[#111111]">{cert.validTo ? `Valid until ${cert.validTo}` : 'Active Certificate'}</div>
             <div className="text-[10px] text-emerald-600 font-semibold">RFC 3161 Authenticode Timestamped</div>
           </div>
 
-          <div className="sm:col-span-2 p-4 rounded-2xl bg-[#F8F8F6] border border-black/5 space-y-1.5">
-            <div className="text-[#888888] font-bold text-[10px] uppercase flex items-center space-x-1">
-              <Hash className="w-3.5 h-3.5 text-[#4A6CF7]" />
-              <span>Binary Image SHA-256 Hash Digest</span>
+          {cert.sha256Hash && (
+            <div className="sm:col-span-2 p-4 rounded-2xl bg-[#F8F8F6] border border-black/5 space-y-1.5">
+              <div className="text-[#888888] font-bold text-[10px] uppercase flex items-center space-x-1">
+                <Hash className="w-3.5 h-3.5 text-[#4A6CF7]" />
+                <span>Binary Image SHA-256 Hash Digest</span>
+              </div>
+              <div className="font-mono text-[11px] text-zinc-900 bg-white p-2 rounded-xl border border-black/10 break-all select-all">
+                {cert.sha256Hash}
+              </div>
             </div>
-            <div className="font-mono text-[11px] text-zinc-900 bg-white p-2 rounded-xl border border-black/10 break-all select-all">
-              {cert.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
-            </div>
-          </div>
+          )}
 
         </div>
 

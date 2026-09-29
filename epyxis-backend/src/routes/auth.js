@@ -13,11 +13,16 @@ const generateToken = (id) => {
 // @desc    Authenticate user & get token (or trigger force-reset)
 // @access  Public
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body; // Using username (or email)
+  const identifier = (req.body.username || req.body.email || '').trim();
+  const { password } = req.body;
+
+  if (!identifier || !password) {
+    return res.status(400).json({ message: 'Email/username and password are required' });
+  }
 
   try {
     const user = await User.findOne({ 
-      $or: [{ email: username.toLowerCase() }, { username: username.toLowerCase() }]
+      $or: [{ email: identifier.toLowerCase() }, { username: identifier.toLowerCase() }]
     });
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {

@@ -5,6 +5,8 @@ const usbEventSchema = new mongoose.Schema({
   deviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Device', required: true },
   vendorId: { type: String, required: true },
   productId: { type: String, required: true },
+  deviceClass: { type: String },
+  serialNumber: { type: String },
   trusted: { type: Boolean, default: false },
   firstSeenAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }

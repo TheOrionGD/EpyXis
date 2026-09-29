@@ -30,7 +30,7 @@ router.post('/enroll', async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(enrollmentToken, process.env.JWT_SECRET || 'fallback_secret');
+    const decoded = jwt.verify(enrollmentToken, JWT_SECRET);
 
     // Generate plaintext key — crypto random, high entropy
     const apiKey = crypto.randomBytes(32).toString('hex');

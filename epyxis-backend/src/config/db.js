@@ -14,7 +14,9 @@ const connectDB = async () => {
 
   try {
     const { MongoMemoryServer } = require('mongodb-memory-server');
-    const mongoServer = await MongoMemoryServer.create();
+    const mongoServer = await MongoMemoryServer.create({
+      spawnTimeoutMS: 120000
+    });
     const mongoUri = mongoServer.getUri();
     const conn = await mongoose.connect(mongoUri);
     console.log(`MongoDB Memory Server Connected: ${conn.connection.host}`);

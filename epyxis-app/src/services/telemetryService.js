@@ -23,5 +23,13 @@ export const telemetryService = {
 
   async getAlerts() {
     return apiClient.get('/dashboard/alerts');
+  },
+
+  async getStats() {
+    return apiClient.get('/dashboard/stats');
+  },
+
+  async getAuditLogs() {
+    return apiClient.get('/team/audit-logs');
   }
 };

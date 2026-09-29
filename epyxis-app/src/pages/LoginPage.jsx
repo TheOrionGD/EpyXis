@@ -22,12 +22,6 @@ import {
   Check
 } from 'lucide-react';
 
-const DEMO_PERSONAS = [
-  { id: 'usr-admin', name: 'Security Admin', email: 'admin@acme.com', role: 'TENANT_ADMIN', badge: 'ADMIN' },
-  { id: 'usr-analyst', name: 'SOC Analyst', email: 'analyst@acme.com', role: 'TENANT_ANALYST', badge: 'ANALYST' },
-  { id: 'usr-provider', name: 'System Provider', email: 'provider@epyxis.io', role: 'SYSTEM_PROVIDER', badge: 'PROVIDER' }
-];
-
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -70,29 +64,44 @@ export default function LoginPage() {
 
       navigate('/dashboard');
     } catch (err) {
-      // Fallback demo login for sandbox / offline preview mode
-      if (username) {
-        localStorage.setItem('token', `epyxis-demo-token-${Date.now()}`);
-        localStorage.setItem('user', JSON.stringify({ name: 'Enterprise Admin', email: username, role: 'TENANT_ADMIN' }));
-        updateUserSession({ name: 'Enterprise Admin', email: username, role: 'TENANT_ADMIN' });
-        navigate('/dashboard');
-      } else {
-        setErrorMsg(err.message || 'Please enter valid credentials.');
-        setStatus('idle');
-      }
+      setErrorMsg(err.message || 'Authentication error. Please check server connection.');
+      setStatus('idle');
     }
   };
 
-  const handleQuickDemoUser = (userObj) => {
-    setUsername(userObj.email);
-    localStorage.setItem('token', `epyxis-demo-token-${userObj.id}`);
-    updateUserSession({
-      id: userObj.id,
-      name: userObj.name,
-      email: userObj.email,
-      role: userObj.role
-    });
-    navigate('/dashboard');
+  const handleGoogleLogin = async () => {
+    setErrorMsg('');
+    try {
+      const { auth } = await import('../config/firebase');
+      const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user?.email;
+      if (email) {
+        const res = await fetch('http://localhost:5000/api/auth/google-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data));
+          updateUserSession({
+            id: data._id,
+            name: data.name,
+            email: data.email,
+            role: data.role === 'owner' || data.role === 'admin' ? 'TENANT_ADMIN' : 'TENANT_ANALYST'
+          });
+          navigate('/dashboard');
+          return;
+        } else {
+          setErrorMsg(data.message || 'Google account not registered to an active workspace.');
+        }
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Google authentication was cancelled.');
+    }
   };
 
   return (
@@ -249,7 +258,7 @@ export default function LoginPage() {
               {/* Social Login */}
               <button
                 type="button"
-                onClick={() => handleQuickDemoUser(DEMO_PERSONAS[0])}
+                onClick={handleGoogleLogin}
                 className="w-full py-3 px-4 rounded-xl border border-gray-200/90 bg-white hover:bg-gray-50 text-gray-700 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 shadow-sm transition-all cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -274,55 +283,16 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Quick Demo Access Personas Bar */}
-            <div className="pt-3 border-t border-gray-100 space-y-2">
-              <div className="flex items-center justify-between text-[10px] font-extrabold tracking-wider uppercase text-gray-400">
-                <span>INSTANT DEMO PERSONAS</span>
-                <span className="text-[#5542F6] font-semibold">1-CLICK LOGIN</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                {DEMO_PERSONAS.map((persona) => {
-                  const isSelected = username === persona.email;
-                  return (
-                    <button
-                      key={persona.id}
-                      type="button"
-                      onClick={() => handleQuickDemoUser(persona)}
-                      className={`p-2 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center space-y-0.5 ${
-                        isSelected
-                          ? 'border-[#5542F6] bg-indigo-50/60 text-[#5542F6] font-bold shadow-xs'
-                          : 'border-gray-200/80 bg-gray-50/50 hover:bg-gray-100/80 text-gray-700 font-medium'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-black">{persona.badge}</span>
-                        {isSelected && <Check className="w-3 h-3 text-[#5542F6]" />}
-                      </div>
-                      <span className="text-[9px] text-gray-500 truncate w-full">{persona.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Bottom Footer Section */}
-            <div className="space-y-3 pt-1">
-              <div className="relative text-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-100"></div>
-                </div>
-                <span className="relative bg-white px-3 text-[11px] text-gray-400 font-medium">or</span>
-              </div>
-
+            <div className="space-y-3 pt-3 border-t border-gray-100">
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => handleQuickDemoUser(DEMO_PERSONAS[0])}
+                  onClick={() => navigate('/request-access')}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5542F6] hover:text-indigo-700 transition-colors cursor-pointer"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Contact tenant administrator</span>
+                  <span>Request workspace access or contact administrator</span>
                 </button>
               </div>
 

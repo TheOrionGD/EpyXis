@@ -19,13 +19,13 @@ export default function ProfileSetupPage() {
   const { currentUser, updateUserSession } = useRbac();
   const navigate = useNavigate();
 
-  const [fullName, setFullName] = useState(currentUser.name !== 'Active User' ? currentUser.name : '');
-  const [orgName, setOrgName] = useState(currentUser.orgId || '');
+  const [fullName, setFullName] = useState(currentUser?.name || '');
+  const [orgName, setOrgName] = useState(currentUser?.orgId || '');
   const [department, setDepartment] = useState('IT & Cyber Security');
   const [jobTitle, setJobTitle] = useState('Security Operations Analyst');
   const [phone, setPhone] = useState('');
 
-  const [isGoogleLinked, setIsGoogleLinked] = useState(currentUser.isGoogleLinked || false);
+  const [isGoogleLinked, setIsGoogleLinked] = useState(Boolean(currentUser?.isGoogleLinked));
   const [googleEmail, setGoogleEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -37,12 +37,12 @@ export default function ProfileSetupPage() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      setIsGoogleLinked(true);
-      setGoogleEmail(user.email);
+      if (user?.email) {
+        setIsGoogleLinked(true);
+        setGoogleEmail(user.email);
+      }
     } catch (err) {
-      console.warn('Firebase Google Auth popup closed or not configured, simulating linking for demo:', err);
-      setIsGoogleLinked(true);
-      setGoogleEmail(currentUser.email || 'user@organization.com');
+      setErrorMsg(err.message || 'Google account linking failed.');
     }
   };
 
